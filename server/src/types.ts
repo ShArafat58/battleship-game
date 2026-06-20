@@ -3,6 +3,24 @@ export interface ShipConfig {
   size: number;
 }
 
+export interface PlacedShip {
+  name: string;
+  size: number;
+  row: number;
+  col: number;
+  orientation: "horizontal" | "vertical";
+}
+
+export interface PlayerPlacement {
+  sessionId: string;
+  placedShips: PlacedShip[];
+}
+
+export interface BattleStartData {
+  sessionId: string;
+  players: { displayName: string; socketId: string }[];
+}
+
 export interface User {
   socketId: string;
   displayName: string;
@@ -17,6 +35,10 @@ export interface GameSession {
   opponentSocketId: string | null;
   opponentDisplayName: string | null;
   status: "waiting" | "active";
+  creatorReady: boolean;
+  creatorShips?: PlacedShip[];
+  opponentReady: boolean;
+  opponentShips?: PlacedShip[];
 }
 
 export interface LobbySession {

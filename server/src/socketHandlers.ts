@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { UserManager } from "./userManager";
 import { SessionManager } from "./sessionManager";
-import { ShipConfig } from "./types";
+import { ShipConfig, PlayerPlacement } from "./types";
 
 export function registerSocketHandlers(io: Server): void {
   const userManager = new UserManager();
@@ -82,6 +82,28 @@ export function registerSocketHandlers(io: Server): void {
       });
 
       broadcastLobbyUpdate();
+    });
+
+    socket.on("submitPlacement", (data: PlayerPlacement) => {
+      const result = sessionManager.setPlayerReady(
+        data.sessionId,
+        socket.id,
+        data.placedShips
+      );
+
+      if (!result.success || !result.session) return;
+
+      socket.emit("placementAccepted");
+
+      if (result.session.creatorReady && result.session.opponentReady) {
+        io.to(result.session.id).emit("battleStart", {
+          sessionId: result.session.id,
+          players: [
+            { displayName: result.session.creatorDisplayName, socketId: result.session.creatorSocketId },
+            { displayName: result.session.opponentDisplayName!, socketId: result.session.opponentSocketId! },
+          ],
+        });
+      }
     });
 
     socket.on("disconnect", () => {

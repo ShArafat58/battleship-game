@@ -3,16 +3,18 @@ import { socket } from "./socket";
 import { NameEntry } from "./components/NameEntry";
 import { CreateGameForm } from "./components/CreateGameForm";
 import { WaitingRoom } from "./components/WaitingRoom";
-import { GameStarting } from "./components/GameStarting";
-import type { LobbySession, GameStartingData } from "./types";
+import { ShipPlacement } from "./components/ShipPlacement";
+import { BattleStarting } from "./components/BattleStarting";
+import type { LobbySession, GameStartingData, BattleStartData } from "./types";
 
-type Screen = "name" | "lobby" | "creating" | "waiting" | "starting";
+type Screen = "name" | "lobby" | "creating" | "waiting" | "starting" | "placement" | "battle";
 
 function App() {
   const [screen, setScreen] = useState<Screen>("name");
   const [displayName, setDisplayName] = useState("");
   const [sessions, setSessions] = useState<LobbySession[]>([]);
   const [gameData, setGameData] = useState<GameStartingData | null>(null);
+  const [battleData, setBattleData] = useState<BattleStartData | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -20,23 +22,30 @@ function App() {
     const onSessionCreated = () => setScreen("waiting");
     const onGameStarting = (data: GameStartingData) => {
       setGameData(data);
-      setScreen("starting");
+      // Skip the starting screen and go straight to placement
+      setScreen("placement");
     };
     const onJoinFailed = (msg: string) => {
       setError(msg);
       setTimeout(() => setError(""), 3000);
+    };
+    const onBattleStart = (data: BattleStartData) => {
+      setBattleData(data);
+      setScreen("battle");
     };
 
     socket.on("lobbyUpdate", onLobbyUpdate);
     socket.on("sessionCreated", onSessionCreated);
     socket.on("gameStarting", onGameStarting);
     socket.on("joinFailed", onJoinFailed);
+    socket.on("battleStart", onBattleStart);
 
     return () => {
       socket.off("lobbyUpdate", onLobbyUpdate);
       socket.off("sessionCreated", onSessionCreated);
       socket.off("gameStarting", onGameStarting);
       socket.off("joinFailed", onJoinFailed);
+      socket.off("battleStart", onBattleStart);
     };
   }, []);
 
@@ -68,6 +77,14 @@ function App() {
 
   if (screen === "starting" && gameData) {
     return <GameStarting data={gameData} />;
+  }
+
+  if (screen === "placement" && gameData) {
+    return <ShipPlacement data={gameData} />;
+  }
+
+  if (screen === "battle" && battleData) {
+    return <BattleStarting data={battleData} />;
   }
 
   return (

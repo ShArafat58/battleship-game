@@ -19,6 +19,8 @@ export class SessionManager {
       opponentSocketId: null,
       opponentDisplayName: null,
       status: "waiting",
+      creatorReady: false,
+      opponentReady: false,
     };
     this.sessions.set(session.id, session);
     return session;
@@ -80,5 +82,26 @@ export class SessionManager {
       }
     }
     return undefined;
+  }
+
+  setPlayerReady(
+    sessionId: string,
+    socketId: string,
+    placedShips: import("./types").PlacedShip[]
+  ): { success: boolean; session?: GameSession } {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.status !== "active") return { success: false };
+
+    if (session.creatorSocketId === socketId) {
+      session.creatorReady = true;
+      session.creatorShips = placedShips;
+    } else if (session.opponentSocketId === socketId) {
+      session.opponentReady = true;
+      session.opponentShips = placedShips;
+    } else {
+      return { success: false };
+    }
+
+    return { success: true, session };
   }
 }
