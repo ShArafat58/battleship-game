@@ -6,7 +6,8 @@ import { WaitingRoom } from "./components/WaitingRoom";
 import { ShipPlacement } from "./components/ShipPlacement";
 import { Battle } from "./components/Battle";
 import { GameOver } from "./components/GameOver";
-import type { LobbySession, GameStartingData, BattleStartData, PlacedShip, GameOverData } from "./types";
+import { Leaderboard } from "./components/Leaderboard";
+import type { LobbySession, GameStartingData, BattleStartData, PlacedShip, GameOverData, PlayerStats } from "./types";
 
 type Screen = "name" | "lobby" | "creating" | "waiting" | "placement" | "battle" | "game_over";
 
@@ -18,6 +19,7 @@ function App() {
   const [battleData, setBattleData] = useState<BattleStartData | null>(null);
   const [gameOverData, setGameOverData] = useState<GameOverData | null>(null);
   const [myPlacedShips, setMyPlacedShips] = useState<PlacedShip[]>([]);
+  const [leaderboard, setLeaderboard] = useState<PlayerStats[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -40,6 +42,9 @@ function App() {
       setGameOverData(data);
       setScreen("game_over");
     };
+    const onLeaderboardData = (data: PlayerStats[]) => {
+      setLeaderboard(data);
+    };
 
     socket.on("lobbyUpdate", onLobbyUpdate);
     socket.on("sessionCreated", onSessionCreated);
@@ -47,6 +52,8 @@ function App() {
     socket.on("joinFailed", onJoinFailed);
     socket.on("battleStart", onBattleStart);
     socket.on("gameOver", onGameOver);
+    socket.on("leaderboardData", onLeaderboardData);
+    socket.on("leaderboardUpdate", onLeaderboardData);
 
     return () => {
       socket.off("lobbyUpdate", onLobbyUpdate);
@@ -55,13 +62,16 @@ function App() {
       socket.off("joinFailed", onJoinFailed);
       socket.off("battleStart", onBattleStart);
       socket.off("gameOver", onGameOver);
+      socket.off("leaderboardData", onLeaderboardData);
+      socket.off("leaderboardUpdate", onLeaderboardData);
     };
   }, []);
 
   const handleNameAssigned = (name: string) => {
-    setDisplayName(name);
-    setScreen("lobby");
-  };
+      setDisplayName(name);
+      setScreen("lobby");
+      socket.emit("getLeaderboard");
+    };
 
   const handleJoin = (sessionId: string) => {
     socket.emit("joinSession", sessionId);
@@ -121,19 +131,25 @@ function App() {
         <button onClick={() => setScreen("creating")}>+ Create Game</button>
       </div>
 
-      <div className="session-list">
-        <h2>Open Games</h2>
-        {sessions.length === 0 && <p className="muted">No open games. Create one!</p>}
-        {sessions.map((s) => (
-          <div key={s.id} className="session-row">
-            <div className="session-info">
-              <strong>{s.creatorDisplayName}</strong>
-              <span>{s.gridSize}×{s.gridSize}</span>
-              <span>{s.ships.length} ships</span>
+      <div className="lobby-content">
+        <div className="session-list">
+          <h2>Open Games</h2>
+          {sessions.length === 0 && <p className="muted">No open games. Create one!</p>}
+          {sessions.map((s) => (
+            <div key={s.id} className="session-row">
+              <div className="session-info">
+                <strong>{s.creatorDisplayName}</strong>
+                <span>{s.gridSize}×{s.gridSize}</span>
+                <span>{s.ships.length} ships</span>
+              </div>
+              <button onClick={() => handleJoin(s.id)}>Join</button>
             </div>
-            <button onClick={() => handleJoin(s.id)}>Join</button>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        <div className="leaderboard-section">
+          <Leaderboard stats={leaderboard} />
+        </div>
       </div>
     </div>
   );

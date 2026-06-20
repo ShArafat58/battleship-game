@@ -193,7 +193,29 @@ button:disabled {
   margin-bottom: 1.5rem;
 }
 
-.session-list h2 {
+.lobby-content {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .lobby-content {
+    flex-direction: column;
+  }
+}
+
+.session-list {
+  flex: 1;
+}
+
+.leaderboard-section {
+  flex: 1;
+  min-width: 300px;
+}
+
+.session-list h2,
+.leaderboard-section h2 {
   color: var(--cyan);
   font-size: 1.3rem;
 }
@@ -727,4 +749,52 @@ button:disabled {
   letter-spacing: 0.2em;
   color: var(--text-dim);
   margin: -0.5rem 0 1.5rem;
+}
+
+/* Leaderboard */
+.leaderboard-panel {
+  background: var(--panel);
+  border: 1px solid var(--border-glow);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.leaderboard-table th {
+  text-align: left;
+  padding: 0.5rem;
+  color: var(--text-dim);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.8rem;
+  border-bottom: 1px solid var(--border-glow);
+}
+
+.leaderboard-table td {
+  padding: 0.75rem 0.5rem;
+  border-bottom: 1px solid rgba(30, 77, 107, 0.4);
+}
+
+.leaderboard-table .rank {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 700;
+  color: var(--sonar);
+}
+
+.leaderboard-table .player-name-cell {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.leaderboard-table .wins-cell {
+  color: var(--sonar);
+  font-weight: 600;
+}
+
+.leaderboard-table .losses-cell {
+  color: var(--hit);
 }

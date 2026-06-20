@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import { UserManager } from "./userManager";
 import { SessionManager } from "./sessionManager";
 import { ShipConfig, PlayerPlacement, ShotData } from "./types";
+import { recordGameResult, getLeaderboard } from "./db";
 
 export function registerSocketHandlers(io: Server): void {
   const userManager = new UserManager();
@@ -108,7 +109,7 @@ export function registerSocketHandlers(io: Server): void {
       }
     });
 
-    socket.on("fireShot", (data: ShotData) => {
+    socket.on("fireShot", async (data: ShotData) => {
       const result = sessionManager.fireShot(data.sessionId, socket.id, data.row, data.col);
       if (!result.success || !result.result || !result.session) return;
 
@@ -129,10 +130,19 @@ export function registerSocketHandlers(io: Server): void {
         });
         sessionManager.removeSession(result.session.id);
         broadcastLobbyUpdate();
+
+        await recordGameResult(winnerName, loserName);
+        const newLeaderboard = await getLeaderboard();
+        io.emit("leaderboardUpdate", newLeaderboard);
       }
     });
 
-    socket.on("disconnect", () => {
+    socket.on("getLeaderboard", async () => {
+      const lb = await getLeaderboard();
+      socket.emit("leaderboardData", lb);
+    });
+
+    socket.on("disconnect", async () => {
       console.log(`Client disconnected: ${socket.id}`);
       const user = userManager.getUser(socket.id);
       
@@ -152,6 +162,10 @@ export function registerSocketHandlers(io: Server): void {
           reason: "disconnect"
         });
         sessionManager.removeSession(activeSession.id);
+
+        await recordGameResult(winnerName, user.displayName);
+        const newLeaderboard = await getLeaderboard();
+        io.emit("leaderboardUpdate", newLeaderboard);
       }
 
       userManager.removeUser(socket.id);

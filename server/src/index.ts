@@ -4,6 +4,10 @@ import { Server } from "socket.io";
 import cors from "cors";
 import path from "path";
 import { registerSocketHandlers } from "./socketHandlers";
+import { initDb } from "./db";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const httpServer = createServer(app);
@@ -30,6 +34,9 @@ app.get("*path", (_req, res) => {
 registerSocketHandlers(io);
 
 const PORT = process.env.PORT || 3001;
+
+initDb();
+
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

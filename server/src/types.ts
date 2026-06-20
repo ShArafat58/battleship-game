@@ -44,6 +44,13 @@ export interface GameOverData {
   reason?: "disconnect" | "victory";
 }
 
+export interface PlayerStats {
+  name: string;
+  wins: number;
+  losses: number;
+  gamesPlayed: number;
+}
+
 export interface User {
   socketId: string;
   displayName: string;
