@@ -1,7 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { UserManager } from "./userManager";
 import { SessionManager } from "./sessionManager";
-import { ShipConfig, PlayerPlacement } from "./types";
+import { ShipConfig, PlayerPlacement, ShotData } from "./types";
 
 export function registerSocketHandlers(io: Server): void {
   const userManager = new UserManager();
@@ -96,21 +96,67 @@ export function registerSocketHandlers(io: Server): void {
       socket.emit("placementAccepted");
 
       if (result.session.creatorReady && result.session.opponentReady) {
+        sessionManager.startBattle(result.session.id);
         io.to(result.session.id).emit("battleStart", {
           sessionId: result.session.id,
           players: [
             { displayName: result.session.creatorDisplayName, socketId: result.session.creatorSocketId },
             { displayName: result.session.opponentDisplayName!, socketId: result.session.opponentSocketId! },
           ],
+          currentTurnSocketId: result.session.creatorSocketId,
         });
+      }
+    });
+
+    socket.on("fireShot", (data: ShotData) => {
+      const result = sessionManager.fireShot(data.sessionId, socket.id, data.row, data.col);
+      if (!result.success || !result.result || !result.session) return;
+
+      io.to(result.session.id).emit("shotResult", result.result);
+
+      if (result.result.gameOver) {
+        const winnerName = result.session.creatorSocketId === result.result.winnerSocketId 
+          ? result.session.creatorDisplayName 
+          : result.session.opponentDisplayName!;
+        const loserName = result.session.creatorSocketId === result.result.winnerSocketId 
+          ? result.session.opponentDisplayName! 
+          : result.session.creatorDisplayName;
+
+        io.to(result.session.id).emit("gameOver", {
+          winnerDisplayName: winnerName,
+          loserDisplayName: loserName,
+          reason: "victory"
+        });
+        sessionManager.removeSession(result.session.id);
+        broadcastLobbyUpdate();
       }
     });
 
     socket.on("disconnect", () => {
       console.log(`Client disconnected: ${socket.id}`);
+      const user = userManager.getUser(socket.id);
+      
+      // Handle mid-game disconnects
+      const activeSession = Array.from(sessionManager["sessions"].values()).find(s => 
+        (s.creatorSocketId === socket.id || s.opponentSocketId === socket.id) && s.status === "active"
+      );
+
+      if (activeSession && user) {
+        const winnerName = activeSession.creatorSocketId === socket.id 
+          ? activeSession.opponentDisplayName! 
+          : activeSession.creatorDisplayName;
+        
+        io.to(activeSession.id).emit("gameOver", {
+          winnerDisplayName: winnerName,
+          loserDisplayName: user.displayName,
+          reason: "disconnect"
+        });
+        sessionManager.removeSession(activeSession.id);
+      }
+
       userManager.removeUser(socket.id);
       const removed = sessionManager.removeSessionsByCreator(socket.id);
-      if (removed.length > 0) {
+      if (removed.length > 0 || activeSession) {
         broadcastLobbyUpdate();
       }
     });

@@ -354,3 +354,100 @@ button:disabled {
 .mt-4 {
   margin-top: 1rem;
 }
+
+/* Phase 4: Battle Screen */
+
+.battle-screen {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.status-banner {
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 1.5rem;
+  font-weight: bold;
+  text-align: center;
+  margin-bottom: 2rem;
+  color: white;
+  transition: background-color 0.3s;
+}
+
+.status-banner.my-turn {
+  background-color: #28a745;
+}
+
+.status-banner.opponent-turn {
+  background-color: #ffc107;
+  color: #333;
+}
+
+.battle-boards-container {
+  display: flex;
+  gap: 4rem;
+  justify-content: center;
+}
+
+.board-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-section h3 {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.fleet-status {
+  margin-bottom: 1rem;
+  font-weight: bold;
+  color: #0066cc;
+}
+
+.firing-board {
+  border-color: #dc3545;
+  opacity: 0.8;
+  transition: opacity 0.3s;
+}
+
+.firing-board.active {
+  border-color: #28a745;
+  opacity: 1;
+}
+
+.clickable {
+  cursor: crosshair;
+}
+
+.clickable:hover {
+  background-color: rgba(220, 53, 69, 0.2);
+}
+
+.shot-hit {
+  background-color: #dc3545 !important;
+  border-color: #a71d2a;
+}
+
+.shot-miss {
+  background-color: transparent !important;
+  position: relative;
+}
+
+.shot-miss::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 30%;
+  height: 30%;
+  background-color: #6c757d;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.sunk-ship {
+  background-color: #8b0000 !important;
+  border-color: #5a0000;
+}

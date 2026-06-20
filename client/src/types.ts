@@ -19,6 +19,29 @@ export interface PlayerPlacement {
 export interface BattleStartData {
   sessionId: string;
   players: { displayName: string; socketId: string }[];
+  currentTurnSocketId: string;
+}
+
+export interface ShotData {
+  sessionId: string;
+  row: number;
+  col: number;
+}
+
+export interface ShotResultData {
+  row: number;
+  col: number;
+  hit: boolean;
+  sunkShip?: PlacedShip;
+  nextTurnSocketId: string;
+  gameOver?: boolean;
+  winnerSocketId?: string;
+}
+
+export interface GameOverData {
+  winnerDisplayName: string;
+  loserDisplayName: string;
+  reason?: "disconnect" | "victory";
 }
 
 export interface LobbySession {

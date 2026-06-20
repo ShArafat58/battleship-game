@@ -4,9 +4,10 @@ import { socket } from "../socket";
 
 interface ShipPlacementProps {
   data: GameStartingData;
+  onSubmitted: (ships: PlacedShip[]) => void;
 }
 
-export function ShipPlacement({ data }: ShipPlacementProps) {
+export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
   const [placedShips, setPlacedShips] = useState<PlacedShip[]>([]);
   const [selectedShipIndex, setSelectedShipIndex] = useState<number | null>(null);
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">("horizontal");
@@ -144,11 +145,13 @@ export function ShipPlacement({ data }: ShipPlacementProps) {
   const handleSubmit = () => {
     if (placedShips.length !== data.ships.length) return;
     setIsReady(true);
+    const finalShips = placedShips.map(({ _index, ...rest }: any) => rest);
     socket.emit("submitPlacement", {
       sessionId: data.sessionId,
       // Strip internal _index property
-      placedShips: placedShips.map(({ _index, ...rest }: any) => rest),
+      placedShips: finalShips,
     });
+    onSubmitted(finalShips);
   };
 
   const allPlaced = placedShips.length === data.ships.length;

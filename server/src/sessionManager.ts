@@ -1,4 +1,4 @@
-import { GameSession, LobbySession, ShipConfig } from "./types";
+import { GameSession, LobbySession, ShipConfig, ShotResultData, PlacedShip } from "./types";
 import { v4 as uuidv4 } from "uuid";
 
 export class SessionManager {
@@ -87,7 +87,7 @@ export class SessionManager {
   setPlayerReady(
     sessionId: string,
     socketId: string,
-    placedShips: import("./types").PlacedShip[]
+    placedShips: PlacedShip[]
   ): { success: boolean; session?: GameSession } {
     const session = this.sessions.get(sessionId);
     if (!session || session.status !== "active") return { success: false };
@@ -103,5 +103,97 @@ export class SessionManager {
     }
 
     return { success: true, session };
+  }
+
+  startBattle(sessionId: string): void {
+    const session = this.sessions.get(sessionId);
+    if (!session) return;
+    session.currentTurnSocketId = session.creatorSocketId;
+    session.creatorShots = [];
+    session.opponentShots = [];
+  }
+
+  private isShipSunk(ship: PlacedShip, shots: { row: number, col: number, hit: boolean }[]): boolean {
+    const hitShots = shots.filter(s => s.hit);
+    for (let i = 0; i < ship.size; i++) {
+      const r = ship.orientation === "horizontal" ? ship.row : ship.row + i;
+      const c = ship.orientation === "horizontal" ? ship.col + i : ship.col;
+      if (!hitShots.some(s => s.row === r && s.col === c)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private allShipsSunk(ships: PlacedShip[], shots: { row: number, col: number, hit: boolean }[]): boolean {
+    return ships.every(ship => this.isShipSunk(ship, shots));
+  }
+
+  fireShot(
+    sessionId: string,
+    socketId: string,
+    row: number,
+    col: number
+  ): { success: boolean; result?: ShotResultData; session?: GameSession } {
+    const session = this.sessions.get(sessionId);
+    if (!session || session.status !== "active" || session.currentTurnSocketId !== socketId) {
+      return { success: false };
+    }
+
+    const isCreator = socketId === session.creatorSocketId;
+    const opponentShips = isCreator ? session.opponentShips! : session.creatorShips!;
+    const myShots = isCreator ? session.creatorShots! : session.opponentShots!;
+    const opponentSocketId = isCreator ? session.opponentSocketId! : session.creatorSocketId;
+
+    if (myShots.some(s => s.row === row && s.col === col)) {
+      return { success: false }; // Already fired here
+    }
+
+    let isHit = false;
+    let sunkShip: PlacedShip | undefined = undefined;
+
+    for (const ship of opponentShips) {
+      for (let i = 0; i < ship.size; i++) {
+        const r = ship.orientation === "horizontal" ? ship.row : ship.row + i;
+        const c = ship.orientation === "horizontal" ? ship.col + i : ship.col;
+        if (r === row && c === col) {
+          isHit = true;
+          break;
+        }
+      }
+      if (isHit) {
+        // Temporarily add shot to check if sunk
+        myShots.push({ row, col, hit: true });
+        if (this.isShipSunk(ship, myShots)) {
+          sunkShip = ship;
+        } else {
+          // Revert for now, added properly below
+          myShots.pop();
+        }
+        break;
+      }
+    }
+
+    myShots.push({ row, col, hit: isHit });
+
+    if (!isHit) {
+      session.currentTurnSocketId = opponentSocketId;
+    }
+
+    const gameOver = this.allShipsSunk(opponentShips, myShots);
+
+    return {
+      success: true,
+      session,
+      result: {
+        row,
+        col,
+        hit: isHit,
+        sunkShip,
+        nextTurnSocketId: session.currentTurnSocketId,
+        gameOver,
+        winnerSocketId: gameOver ? socketId : undefined,
+      }
+    };
   }
 }
