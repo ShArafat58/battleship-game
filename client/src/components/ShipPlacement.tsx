@@ -1,5 +1,6 @@
+import { BoardFrame } from "./BoardFrame";
 import { useState, useEffect } from "react";
-import type { GameStartingData, PlacedShip, ShipConfig } from "../types";
+import type { GameStartingData, PlacedShip } from "../types";
 import { socket } from "../socket";
 
 interface ShipPlacementProps {
@@ -14,7 +15,6 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
   const [hoverCell, setHoverCell] = useState<{ row: number; col: number } | null>(null);
   const [isReady, setIsReady] = useState(false);
 
-  // Keyboard shortcut for rotation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === "r") {
@@ -25,15 +25,8 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const unplacedShips = data.ships.map((s, i) => ({ ...s, originalIndex: i })).filter(
-    (s) => !placedShips.some((ps) => ps.name === s.name && ps.size === s.size && data.ships.indexOf(s) === s.originalIndex)
-    // Actually we need to uniquely identify ships since there could be duplicates.
-    // So let's base it purely on the index in data.ships.
-  );
-  
-  // A safer unplaced logic relying on index
   const availableShips = data.ships.map((ship, index) => {
-    const placed = placedShips.find((ps) => ps.name === ship.name && ps.size === ship.size && (ps as any)._index === index);
+    const placed = placedShips.find((ps) => (ps as any)._index === index);
     return { ship, index, isPlaced: !!placed };
   });
 
@@ -51,13 +44,11 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
 
   const isPlacementValid = (row: number, col: number, size: number, orient: "horizontal" | "vertical", ignoreIndex?: number) => {
     const cells = getHoverCells(row, col, size, orient);
-    
-    // Bounds check
+
     if (cells.some((c) => c.row < 0 || c.row >= data.gridSize || c.col < 0 || c.col >= data.gridSize)) {
       return false;
     }
 
-    // Overlap check
     for (const cell of cells) {
       if (
         placedShips.some(
@@ -79,18 +70,17 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
     if (isReady) return;
 
     if (selectedShipIndex !== null) {
-      const shipToPlace = availableShips.find(s => s.index === selectedShipIndex)?.ship;
+      const shipToPlace = availableShips.find((s) => s.index === selectedShipIndex)?.ship;
       if (!shipToPlace) return;
 
       if (isPlacementValid(row, col, shipToPlace.size, orientation)) {
         setPlacedShips((prev) => [
           ...prev,
-          { ...shipToPlace, row, col, orientation, _index: selectedShipIndex } as any
+          { ...shipToPlace, row, col, orientation, _index: selectedShipIndex } as any,
         ]);
         setSelectedShipIndex(null);
       }
     } else {
-      // Check if clicking on an already placed ship to pick it up
       const clickedShip = placedShips.find((ps) =>
         getHoverCells(ps.row, ps.col, ps.size, ps.orientation).some(
           (c) => c.row === row && c.col === col
@@ -106,8 +96,8 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
 
   const handleRandomize = () => {
     if (isReady) return;
-    let currentPlaced: any[] = [];
-    
+    const currentPlaced: any[] = [];
+
     for (let i = 0; i < data.ships.length; i++) {
       const ship = data.ships[i];
       let placed = false;
@@ -118,16 +108,16 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
         const col = Math.floor(Math.random() * data.gridSize);
 
         const cells = getHoverCells(row, col, ship.size, orient);
-        
-        const inBounds = cells.every(c => c.row >= 0 && c.row < data.gridSize && c.col >= 0 && c.col < data.gridSize);
+
+        const inBounds = cells.every((c) => c.row >= 0 && c.row < data.gridSize && c.col >= 0 && c.col < data.gridSize);
         if (!inBounds) {
           attempts++;
           continue;
         }
 
-        const overlap = cells.some(c => 
-          currentPlaced.some(ps => 
-            getHoverCells(ps.row, ps.col, ps.size, ps.orientation).some(pc => pc.row === c.row && pc.col === c.col)
+        const overlap = cells.some((c) =>
+          currentPlaced.some((ps) =>
+            getHoverCells(ps.row, ps.col, ps.size, ps.orientation).some((pc) => pc.row === c.row && pc.col === c.col)
           )
         );
 
@@ -148,7 +138,6 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
     const finalShips = placedShips.map(({ _index, ...rest }: any) => rest);
     socket.emit("submitPlacement", {
       sessionId: data.sessionId,
-      // Strip internal _index property
       placedShips: finalShips,
     });
     onSubmitted(finalShips);
@@ -165,54 +154,56 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
 
       <div className="placement-content">
         <div className="board-container">
-          <div
-            className="board"
-            style={{
-              gridTemplateColumns: `repeat(${data.gridSize}, 1fr)`,
-              gridTemplateRows: `repeat(${data.gridSize}, 1fr)`,
-            }}
-            onMouseLeave={() => setHoverCell(null)}
-          >
-            {Array.from({ length: data.gridSize }).map((_, row) =>
-              Array.from({ length: data.gridSize }).map((_, col) => {
-                let isHovered = false;
-                let isValidHover = false;
-                let isPlacedHere = false;
+          <BoardFrame gridSize={data.gridSize}>
+            <div
+              className="board"
+              style={{
+                gridTemplateColumns: `repeat(${data.gridSize}, 1fr)`,
+                gridTemplateRows: `repeat(${data.gridSize}, 1fr)`,
+              }}
+              onMouseLeave={() => setHoverCell(null)}
+            >
+              {Array.from({ length: data.gridSize }).map((_, row) =>
+                Array.from({ length: data.gridSize }).map((_, col) => {
+                  let isHovered = false;
+                  let isValidHover = false;
+                  let isPlacedHere = false;
 
-                if (hoverCell && selectedShipIndex !== null) {
-                  const ship = availableShips.find(s => s.index === selectedShipIndex)?.ship;
-                  if (ship) {
-                    const hCells = getHoverCells(hoverCell.row, hoverCell.col, ship.size, orientation);
-                    if (hCells.some((c) => c.row === row && c.col === col)) {
-                      isHovered = true;
-                      isValidHover = isPlacementValid(hoverCell.row, hoverCell.col, ship.size, orientation);
+                  if (hoverCell && selectedShipIndex !== null) {
+                    const ship = availableShips.find((s) => s.index === selectedShipIndex)?.ship;
+                    if (ship) {
+                      const hCells = getHoverCells(hoverCell.row, hoverCell.col, ship.size, orientation);
+                      if (hCells.some((c) => c.row === row && c.col === col)) {
+                        isHovered = true;
+                        isValidHover = isPlacementValid(hoverCell.row, hoverCell.col, ship.size, orientation);
+                      }
                     }
                   }
-                }
 
-                if (!isHovered) {
-                  isPlacedHere = placedShips.some((ps) =>
-                    getHoverCells(ps.row, ps.col, ps.size, ps.orientation).some(
-                      (c) => c.row === row && c.col === col
-                    )
+                  if (!isHovered) {
+                    isPlacedHere = placedShips.some((ps) =>
+                      getHoverCells(ps.row, ps.col, ps.size, ps.orientation).some(
+                        (c) => c.row === row && c.col === col
+                      )
+                    );
+                  }
+
+                  let cellClass = "board-cell";
+                  if (isHovered) cellClass += isValidHover ? " hover-valid" : " hover-invalid";
+                  if (isPlacedHere) cellClass += " placed";
+
+                  return (
+                    <div
+                      key={`${row}-${col}`}
+                      className={cellClass}
+                      onMouseEnter={() => setHoverCell({ row, col })}
+                      onClick={() => handleCellClick(row, col)}
+                    />
                   );
-                }
-
-                let cellClass = "board-cell";
-                if (isHovered) cellClass += isValidHover ? " hover-valid" : " hover-invalid";
-                if (isPlacedHere) cellClass += " placed";
-
-                return (
-                  <div
-                    key={`${row}-${col}`}
-                    className={cellClass}
-                    onMouseEnter={() => setHoverCell({ row, col })}
-                    onClick={() => handleCellClick(row, col)}
-                  />
-                );
-              })
-            )}
-          </div>
+                })
+              )}
+            </div>
+          </BoardFrame>
         </div>
 
         <div className="placement-sidebar">
@@ -237,9 +228,7 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
               {availableShips.map(({ ship, index, isPlaced }) => (
                 <li
                   key={index}
-                  className={`ship-item ${isPlaced ? "placed" : ""} ${
-                    selectedShipIndex === index ? "selected" : ""
-                  }`}
+                  className={`ship-item ${isPlaced ? "placed" : ""} ${selectedShipIndex === index ? "selected" : ""}`}
                   onClick={() => {
                     if (!isReady && !isPlaced) {
                       setSelectedShipIndex(index);
@@ -252,11 +241,7 @@ export function ShipPlacement({ data, onSubmitted }: ShipPlacementProps) {
             </ul>
           </div>
 
-          <button
-            className="ready-btn"
-            onClick={handleSubmit}
-            disabled={!allPlaced || isReady}
-          >
+          <button className="ready-btn" onClick={handleSubmit} disabled={!allPlaced || isReady}>
             {isReady ? "Ready!" : "Ready"}
           </button>
         </div>

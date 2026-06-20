@@ -96,6 +96,7 @@ function App() {
     return (
       <GameOver
         data={gameOverData}
+        myName={displayName}
         onReturnToLobby={() => {
           setGameData(null);
           setBattleData(null);

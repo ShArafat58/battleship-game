@@ -1,3 +1,4 @@
+import { BoardFrame } from "./BoardFrame";
 import { useState, useEffect } from "react";
 import type { BattleStartData, PlacedShip, ShotResultData } from "../types";
 import { socket } from "../socket";
@@ -17,13 +18,11 @@ export function Battle({ data, initialShips, gridSize }: BattleProps) {
   useEffect(() => {
     const onShotResult = (result: ShotResultData) => {
       if (currentTurnId === socket.id) {
-        // I fired this shot
         setMyShots((prev) => [...prev, { row: result.row, col: result.col, hit: result.hit }]);
         if (result.sunkShip) {
           setOpponentSunkShips((prev) => [...prev, result.sunkShip!]);
         }
       } else {
-        // Opponent fired this shot
         setOpponentShots((prev) => [...prev, { row: result.row, col: result.col, hit: result.hit }]);
       }
       setCurrentTurnId(result.nextTurnSocketId);
@@ -39,7 +38,7 @@ export function Battle({ data, initialShips, gridSize }: BattleProps) {
 
   const handleFire = (row: number, col: number) => {
     if (!isMyTurn) return;
-    if (myShots.some((s) => s.row === row && s.col === col)) return; // already fired here
+    if (myShots.some((s) => s.row === row && s.col === col)) return;
 
     socket.emit("fireShot", {
       sessionId: data.sessionId,
@@ -60,7 +59,6 @@ export function Battle({ data, initialShips, gridSize }: BattleProps) {
     return cells;
   };
 
-  // Helper to check if one of my ships is sunk based on opponentShots
   const getMySunkShipsCount = () => {
     let sunkCount = 0;
     for (const ship of initialShips) {
@@ -78,80 +76,82 @@ export function Battle({ data, initialShips, gridSize }: BattleProps) {
       </div>
 
       <div className="battle-boards-container">
-        {/* Your Board */}
         <div className="board-section">
           <h3>Your Board</h3>
           <div className="fleet-status">
             Ships Remaining: {initialShips.length - getMySunkShipsCount()} / {initialShips.length}
           </div>
-          <div
-            className="board"
-            style={{
-              gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-              gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-            }}
-          >
-            {Array.from({ length: gridSize }).map((_, row) =>
-              Array.from({ length: gridSize }).map((_, col) => {
-                const isShip = initialShips.some((ship) =>
-                  getHoverCells(ship.row, ship.col, ship.size, ship.orientation).some(
-                    (c) => c.row === row && c.col === col
-                  )
-                );
-                const shot = opponentShots.find((s) => s.row === row && s.col === col);
+          <BoardFrame gridSize={gridSize}>
+            <div
+              className="board"
+              style={{
+                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                gridTemplateRows: `repeat(${gridSize}, 1fr)`,
+              }}
+            >
+              {Array.from({ length: gridSize }).map((_, row) =>
+                Array.from({ length: gridSize }).map((_, col) => {
+                  const isShip = initialShips.some((ship) =>
+                    getHoverCells(ship.row, ship.col, ship.size, ship.orientation).some(
+                      (c) => c.row === row && c.col === col
+                    )
+                  );
+                  const shot = opponentShots.find((s) => s.row === row && s.col === col);
 
-                let cellClass = "board-cell";
-                if (isShip) cellClass += " placed";
-                if (shot) {
-                  cellClass += shot.hit ? " shot-hit" : " shot-miss";
-                }
+                  let cellClass = "board-cell";
+                  if (isShip) cellClass += " placed";
+                  if (shot) {
+                    cellClass += shot.hit ? " shot-hit" : " shot-miss";
+                  }
 
-                return <div key={`my-${row}-${col}`} className={cellClass} />;
-              })
-            )}
-          </div>
+                  return <div key={`my-${row}-${col}`} className={cellClass} />;
+                })
+              )}
+            </div>
+          </BoardFrame>
         </div>
 
-        {/* Opponent's Board */}
         <div className="board-section">
           <h3>Opponent's Board</h3>
           <div className="fleet-status">
             Enemy Ships Sunk: {opponentSunkShips.length} / {initialShips.length}
           </div>
-          <div
-            className={`board firing-board ${isMyTurn ? "active" : ""}`}
-            style={{
-              gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
-              gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-            }}
-          >
-            {Array.from({ length: gridSize }).map((_, row) =>
-              Array.from({ length: gridSize }).map((_, col) => {
-                const shot = myShots.find((s) => s.row === row && s.col === col);
-                const isSunkShipCell = opponentSunkShips.some((ship) =>
-                  getHoverCells(ship.row, ship.col, ship.size, ship.orientation).some(
-                    (c) => c.row === row && c.col === col
-                  )
-                );
+          <BoardFrame gridSize={gridSize}>
+            <div
+              className={`board firing-board ${isMyTurn ? "active" : ""}`}
+              style={{
+                gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
+                gridTemplateRows: `repeat(${gridSize}, 1fr)`,
+              }}
+            >
+              {Array.from({ length: gridSize }).map((_, row) =>
+                Array.from({ length: gridSize }).map((_, col) => {
+                  const shot = myShots.find((s) => s.row === row && s.col === col);
+                  const isSunkShipCell = opponentSunkShips.some((ship) =>
+                    getHoverCells(ship.row, ship.col, ship.size, ship.orientation).some(
+                      (c) => c.row === row && c.col === col
+                    )
+                  );
 
-                let cellClass = "board-cell clickable";
-                if (shot) {
-                  cellClass += shot.hit ? " shot-hit" : " shot-miss";
-                }
-                if (isSunkShipCell) {
-                  cellClass += " sunk-ship";
-                }
+                  let cellClass = "board-cell clickable";
+                  if (shot) {
+                    cellClass += shot.hit ? " shot-hit" : " shot-miss";
+                  }
+                  if (isSunkShipCell) {
+                    cellClass += " sunk-ship";
+                  }
 
-                return (
-                  <div
-                    key={`opp-${row}-${col}`}
-                    className={cellClass}
-                    onClick={() => handleFire(row, col)}
-                  />
-                );
-              })
-            )}
-          </div>
+                  return (
+                    <div
+                      key={`opp-${row}-${col}`}
+                      className={cellClass}
+                      onClick={() => handleFire(row, col)}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </BoardFrame>
         </div>
       </div>
     </div>
