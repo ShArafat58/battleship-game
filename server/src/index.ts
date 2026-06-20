@@ -27,7 +27,8 @@ app.get("/api/health", (_req, res) => {
 
 const clientDistPath = path.join(__dirname, "../../client/dist");
 app.use(express.static(clientDistPath));
-app.get("*path", (_req, res) => {
+
+app.use((_req, res) => {
   res.sendFile(path.join(clientDistPath, "index.html"));
 });
 
