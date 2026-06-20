@@ -24,7 +24,9 @@ export function NameEntry({ onNameAssigned }: NameEntryProps) {
   return (
     <div className="screen-center">
       <div className="card">
+        <div className="logo-anchor">⚓</div>
         <h1>Battleship</h1>
+        <p className="tagline">NAVAL COMBAT • REAL-TIME MULTIPLAYER</p>
         <form onSubmit={handleSubmit}>
           <input
             id="name-input"

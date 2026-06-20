@@ -696,3 +696,35 @@ button:disabled {
   color: var(--text-dim);
   font-size: 1.1rem;
 }
+
+.name-entry-card {
+  max-width: 400px;
+}
+
+.logo-anchor {
+  font-size: 3.5rem;
+  color: var(--sonar);
+  text-shadow: 0 0 30px rgba(54, 241, 205, 0.6);
+  margin-bottom: 0.5rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.tagline {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+  margin: -0.5rem 0 1.5rem;
+}
